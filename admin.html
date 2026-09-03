@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 部署上线时：若 Pages 与 Worker 不同域，把 content 填成 Worker 地址（如 https://msb-bbs.<sub>.workers.dev）；本地开发留空 -->
+<meta name="api-base" content="">
+<title>404 · 恒序基金会</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/bbs.css">
+</head>
+<body>
+
+<!-- 未授权伪装 404（与 bbs.html 同款 markup） -->
+<div class="page-404" id="page404">
+  <div>
+    <div class="code">404</div>
+    <h2>您访问的页面不存在</h2>
+    <p>该页面可能已被移动、删除，或从未存在过。</p>
+    <a class="home-link" href="index.html">返回首页</a>
+  </div>
+</div>
+
+<!-- 管理员后台根节点：默认空。非管理员访问时，账号管理 DOM 一个字节都不渲染 -->
+<div id="bbs">
+  <div class="crt-overlay"></div>
+  <div class="crt-vignette"></div>
+  <div class="admin-main" id="adminRoot"></div>
+</div>
+
+<div class="oc-disclaimer-bbs">OC 创作虚构内容 · 本站所有组织、人物、数据均为虚构，不代表任何真实机构，不接受任何实际捐赠</div>
+
+<script src="assets/bbs-data.js"></script>
+<script src="assets/auth.js"></script>
+<script>
+(function(){
+'use strict';
+/* 门禁：先 AUTH.init() 用 token 调 /api/me 恢复会话，再校验。
+   非管理员 → 只显示伪装 404，标题保持 404 骗过旁观者 */
+function deny(){ document.getElementById('page404').classList.add('on'); }
+if(!window.AUTH || !AUTH.init){ deny(); return; }
+AUTH.init().then(function(u){
+if(!u || u.admin !== true){   // #bbs 默认 display:none，只显示伪装 404
+  deny();
+  return;
+}
+
+document.title = 'MSB-ADMIN';
+var bbsEl = document.getElementById('bbs');
+bbsEl.classList.add('on');
+document.getElementById('page404').classList.remove('on');
+
+var root = document.getElementById('adminRoot');
+
+function esc(s){ return String(s).replace(/</g,'&lt;'); }
+
+/* 铁律：渲染前清空容器。账号表来自服务端（Promise），拉到后再渲染 */
+function render(){
+  root.innerHTML = '';
+  AUTH.listAccounts().then(function(list){
+    renderTable(list);
+  }).catch(function(e){
+    root.innerHTML = '<div class="admin-title">万界稳定局 · 账号管理终端</div>' +
+      '<div class="fw-block">⚠ 账号列表获取失败：' + esc(e && e.message || '网络错误') + '</div>';
+  });
+}
+var _list = [];   // 最近一次服务端账号表（含 admin 字段），onDel 双保险用
+function renderTable(list){
+  _list = list;
+  root.innerHTML = '';
+  var html = '';
+  html += '<div class="admin-title">万界稳定局 · 账号管理终端</div>';
+  html += '<div class="admin-sub">ACCOUNT REGISTRY — ' + esc(u.name) + ' · ' + esc(u.role) + ' · 权限 ' + esc(u.level) + '</div>';
+  html += '<div style="margin-bottom:18px"><button class="t-btn" id="backBbs">[ &lt;&lt; 返回论坛 ]</button></div>';
+
+  /* 账号表（list 由 render() 从服务端拉取后传入） */
+  html += '<div class="admin-table"><div class="admin-row head">' +
+    '<span>账号</span><span>姓名</span><span>职务</span><span>权限</span><span>来源</span><span>操作</span></div>';
+  list.forEach(function(a){
+    html += '<div class="admin-row">' +
+      '<span>' + esc(a.id) + '</span>' +
+      '<span>' + esc(a.name) + '</span>' +
+      '<span>' + esc(a.role) + '</span>' +
+      '<span class="lv-cell">[' + esc(a.level) + ']</span>' +
+      '<span class="' + (a.source === '新增' ? 'src-added' : 'src-builtin') + '">' + esc(a.source) + '</span>' +
+      '<span>' + (a.admin ? '<span style="color:#0FA962">—</span>'
+                          : '<button class="mini-btn danger" data-del="' + esc(a.id) + '">[ 删除 ]</button>') + '</span>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  /* 添加账号表单 */
+  html += '<div class="admin-form"><div class="af-title">[ + 新增账号 ]</div>' +
+    '<input type="text" id="afId" maxlength="16" placeholder="用户名（小写字母开头，可含数字/下划线）" autocomplete="off">' +
+    '<input type="text" id="afName" maxlength="12" placeholder="姓名">' +
+    '<input type="text" id="afRole" maxlength="24" placeholder="职务">' +
+    '<select id="afLevel"><option>L1</option><option>L2</option><option>L3</option><option>L4</option><option>L5</option></select>' +
+    '<input type="password" id="afPass" placeholder="初始密码（至少 6 位，PBKDF2 哈希存储）" autocomplete="new-password">' +
+    '<div class="admin-msg" id="afMsg"></div>' +
+    '<div class="composer-actions"><button class="t-btn primary" id="afAdd">[ 添加账号 ]</button></div>' +
+  '</div>';
+
+  root.innerHTML = html;
+
+  document.getElementById('backBbs').addEventListener('click', function(){ location.href = 'bbs.html'; });
+  document.getElementById('afAdd').addEventListener('click', onAdd);
+  var dels = root.querySelectorAll('[data-del]');
+  for(var i=0;i<dels.length;i++){
+    dels[i].addEventListener('click', function(){ onDel(this.getAttribute('data-del')); });
+  }
+}
+
+/* 终端风确认弹窗（与 bbs.js 同款） */
+function termConfirm(msg, onOk){
+  var old = document.querySelector('.term-confirm-mask');
+  if(old) old.parentNode.removeChild(old);
+  var mask = document.createElement('div');
+  mask.className = 'term-confirm-mask';
+  mask.innerHTML = '<div class="term-confirm"><div class="tc-msg">' + msg + '</div>' +
+    '<div class="tc-actions"><button class="mini-btn danger" data-tc="ok">[ 确认删除 ]</button>' +
+    '<button class="mini-btn" data-tc="no">[ 取消 ]</button></div></div>';
+  document.body.appendChild(mask);
+  function close(){ if(mask.parentNode) mask.parentNode.removeChild(mask); }
+  mask.querySelector('[data-tc="ok"]').addEventListener('click', function(){ close(); onOk(); });
+  mask.querySelector('[data-tc="no"]').addEventListener('click', close);
+  mask.addEventListener('click', function(e){ if(e.target === mask) close(); });
+}
+
+function onAdd(){
+  var msg = document.getElementById('afMsg');
+  msg.textContent = '';
+  AUTH.addAccount(document.getElementById('afId').value, {
+    name: document.getElementById('afName').value.trim(),
+    role: document.getElementById('afRole').value.trim(),
+    level: document.getElementById('afLevel').value,
+    pass: document.getElementById('afPass').value
+  }).then(function(){
+    render();   // 写覆盖层后清容器即时重渲染
+    var m2 = document.getElementById('afMsg');
+    if(m2) m2.textContent = '账号已添加。';
+  }).catch(function(e){
+    msg.textContent = '✕ ' + (e && e.message ? e.message : '添加失败');
+  });
+}
+
+function onDel(id){
+  /* 禁止删管理员：以服务端 /api/admin/accounts 返回的 admin 字段为准（按钮本就不渲染，双保险） */
+  for(var i=0;i<_list.length;i++){ if(_list[i].id === id && _list[i].admin){ return; } }
+  termConfirm('确认删除账号「' + esc(id) + '」？内置账号将进入移除覆盖层。', function(){
+    AUTH.removeAccount(id).then(render).catch(function(e){ alert(e.message || '删除失败'); });
+  });
+}
+
+render();
+}).catch(deny);
+})();
+</script>
+</body>
+</html>
+
+<!-- ============================================================
+  OC 免责声明：本页面为原创角色（OC）创作项目的虚构网站组成部分。
+  恒序基金会、万界稳定局及站内所有数据、人物、组织、事件均为虚构，
+  不代表任何真实机构，亦不接受任何实际捐赠。仅供创作交流与非商业演示。
+============================================================ -->

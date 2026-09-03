@@ -1,0 +1,165 @@
+/* ============ 里页面：CRT 终端 ============ */
+#bbs{position:fixed;inset:0;z-index:500;overflow-y:auto;display:none;background:#050805;color:#00F48E;font-family:"JetBrains Mono","Cascadia Mono","Sarasa Mono SC","Noto Sans Mono CJK SC",monospace;font-size:14px;line-height:1.7;text-shadow:0 0 6px rgba(0,244,142,.45)}
+#bbs.on{display:block}
+#bbs ::selection{background:#00F48E;color:#000}
+.crt-overlay{position:fixed;inset:0;pointer-events:none;z-index:600;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+.crt-vignette{position:fixed;inset:0;pointer-events:none;z-index:601;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.5) 100%);animation:crtFlicker 4.2s infinite}
+@keyframes crtFlicker{0%,94%,100%{opacity:1}95%{opacity:.86}96%{opacity:.97}97.5%{opacity:.9}}
+.cursor{display:inline-block;animation:blink .5s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.boot{padding:8vh 6vw;white-space:pre-wrap;font-size:14.5px;min-height:60vh}
+.boot .ok{color:#00F48E}
+.boot .warn{color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.5)}
+.boot .err{color:#FF3B30;text-shadow:0 0 6px rgba(255,59,48,.5)}
+.bbs-main{max-width:1180px;margin:0 auto;padding:26px clamp(14px,3vw,40px) 40px;position:relative;z-index:2}
+.bbs-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;border-bottom:2px solid #00F48E;padding-bottom:14px}
+.bbs-logo{font-size:clamp(20px,3vw,30px);font-weight:700;letter-spacing:.18em}
+.bbs-sub{font-size:10.5px;letter-spacing:.24em;color:#0FA962;margin-top:4px}
+.bbs-status{text-align:right;font-size:12px}
+.dR-ticker{color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.5);margin:4px 0}
+.logout-btn,.t-btn{background:none;border:1px solid #00F48E;color:#00F48E;font:inherit;font-size:12px;padding:3px 12px;cursor:pointer;letter-spacing:.1em;transition:all .15s}
+.logout-btn:hover,.t-btn:hover{background:#00F48E;color:#000;text-shadow:none}
+.t-btn.primary{border-color:#FFB000;color:#FFB000}
+.t-btn.primary:hover{background:#FFB000;color:#000}
+.bbs-rule{text-align:center;font-size:11.5px;color:#0FA962;letter-spacing:.14em;padding:10px 0;border-bottom:1px dashed rgba(0,244,142,.35);margin-bottom:22px}
+.bbs-body{display:grid;grid-template-columns:250px 1fr;gap:26px;align-items:start}
+@media(max-width:860px){.bbs-body{grid-template-columns:1fr}}
+.board{border:1px solid rgba(0,244,142,.4);margin-bottom:14px;cursor:pointer;transition:background .15s}
+.board:hover{background:rgba(0,244,142,.08)}
+.board.active{background:rgba(0,244,142,.14);border-color:#00F48E}
+.board-head{padding:10px 12px;font-weight:700;letter-spacing:.08em;font-size:13.5px}
+.board-head .cnt{float:right;font-size:10.5px;color:#0FA962;font-weight:400}
+.board-desc{padding:0 12px 10px;font-size:11px;color:#0FA962}
+.board.locked{border-color:rgba(255,176,0,.5)}
+.board.locked .board-head{color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.5)}
+.lock-tag{font-size:10px;color:#FFB000;margin-left:8px}
+.content-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(0,244,142,.4);padding-bottom:10px;margin-bottom:6px;font-size:13px;letter-spacing:.06em}
+.thread-row{display:grid;grid-template-columns:1fr auto;gap:6px 18px;padding:11px 6px;border-bottom:1px dashed rgba(0,244,142,.22);cursor:pointer}
+.thread-row:hover{background:rgba(0,244,142,.07)}
+.thread-title{font-size:14px}
+.thread-title .pin{color:#FFB000;margin-right:6px}
+.thread-meta{font-size:11px;color:#0FA962;grid-column:1/-1;letter-spacing:.05em}
+.thread-count{font-size:11.5px;color:#0FA962;align-self:center;white-space:nowrap}
+.empty-tip{padding:34px 0;text-align:center;color:#0FA962;font-size:12.5px}
+.pager{display:flex;justify-content:center;align-items:center;gap:18px;padding:18px 0;font-size:12px;color:#0FA962}
+.pager .pg-btn{cursor:pointer;border:1px solid rgba(0,244,142,.4);padding:2px 14px;transition:all .15s}
+.pager .pg-btn:hover{background:#00F48E;color:#000}
+.pager .pg-btn.off{opacity:.3;pointer-events:none}
+.post{border:1px solid rgba(0,244,142,.35);margin-bottom:16px}
+.post-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(0,244,142,.09);padding:8px 14px;font-size:12px;letter-spacing:.05em}
+.post-head .lv{color:#FFB000}
+.post-body{padding:14px 16px;white-space:pre-wrap;font-size:13.5px}
+.post-body .redact{background:#00F48E;color:#00F48E;text-shadow:none;border-radius:1px;padding:0 2px}
+.post-body .warn-line{color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.5)}
+.thread-title-big{font-size:clamp(17px,2.4vw,22px);font-weight:700;letter-spacing:.06em;border-left:4px solid #00F48E;padding-left:14px;margin-bottom:18px;line-height:1.5}
+.back-link{font-size:12px;cursor:pointer;color:#0FA962;display:inline-block;margin-bottom:16px}
+.back-link:hover{color:#00F48E}
+.composer{border:1px solid #FFB000;margin-top:22px;padding:16px}
+.composer-head{color:#FFB000;font-size:13px;letter-spacing:.14em;margin-bottom:12px}
+.composer input,.composer textarea{width:100%;background:rgba(0,244,142,.04);border:1px solid rgba(0,244,142,.4);color:#00F48E;font:inherit;font-size:13px;padding:9px 12px;outline:none;margin-bottom:12px;text-shadow:0 0 4px rgba(0,244,142,.3)}
+.composer input:focus,.composer textarea:focus{border-color:#00F48E}
+.composer-actions{display:flex;gap:12px}
+.bbs-foot{margin-top:44px;border-top:1px dashed rgba(0,244,142,.35);padding-top:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:10.5px;color:#0FA962;letter-spacing:.1em}
+.fw-block{border:1px solid #FF3B30;color:#FF3B30;padding:30px 20px;text-align:center;text-shadow:0 0 8px rgba(255,59,48,.6);letter-spacing:.12em;font-size:13.5px;animation:fwFlash 1.2s steps(2) 3}
+@keyframes fwFlash{50%{background:rgba(255,59,48,.12)}}
+
+/* ============ Wave 2：删/改小按钮 · AI 设置弹窗 · 人格回复进场 ============ */
+.post-ops{display:flex;gap:10px;margin:-8px 0 16px;padding:0 2px}
+.mini-btn{background:none;border:1px solid rgba(0,244,142,.55);color:#00F48E;font:inherit;font-size:11px;padding:1px 9px;cursor:pointer;letter-spacing:.08em;transition:all .15s;text-shadow:0 0 4px rgba(0,244,142,.35)}
+.mini-btn:hover{background:#00F48E;color:#000;text-shadow:none}
+.mini-btn.danger{border-color:rgba(255,176,0,.6);color:#FFB000;text-shadow:0 0 4px rgba(255,176,0,.4)}
+.mini-btn.danger:hover{background:#FFB000;color:#000;text-shadow:none}
+.edited-tag{font-size:11px;color:#FFB000;letter-spacing:.1em;font-weight:400}
+.ai-settings-btn{margin-right:10px}
+.ai-mask{position:fixed;inset:0;z-index:700;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+.ai-mask.on{display:flex}
+.ai-modal{width:min(520px,92vw);border:1px solid #00F48E;background:#050805;padding:22px 24px;box-shadow:0 0 24px rgba(0,244,142,.25);color:#00F48E;font-family:"JetBrains Mono","Cascadia Mono","Sarasa Mono SC","Noto Sans Mono CJK SC",monospace}
+.ai-title{font-size:15px;font-weight:700;letter-spacing:.12em;margin-bottom:12px}
+.ai-desc{font-size:12px;line-height:1.8;color:#0FA962;margin-bottom:10px}
+.ai-hl{color:#FFB000}
+.ai-note{font-size:11.5px;color:#FFB000;border:1px dashed rgba(255,176,0,.5);padding:8px 10px;margin-bottom:14px;letter-spacing:.05em}
+.ai-modal input{width:100%;box-sizing:border-box;background:rgba(0,244,142,.04);border:1px solid rgba(0,244,142,.4);color:#00F48E;font:inherit;font-size:13px;padding:9px 12px;outline:none;margin-bottom:12px;text-shadow:0 0 4px rgba(0,244,142,.3)}
+.ai-modal input:focus{border-color:#00F48E}
+.ai-status{font-size:11.5px;color:#0FA962;margin-bottom:12px;letter-spacing:.08em}
+@keyframes aiReplyIn{0%{background:rgba(0,244,142,.28);box-shadow:0 0 18px rgba(0,244,142,.5)}100%{background:transparent;box-shadow:none}}
+.post.ai-new{animation:aiReplyIn 2.4s ease-out 1}
+
+/* ============ Wave 2.1：终端风确认弹窗 · 置顶标记 · 管理员后台 ============ */
+.term-confirm-mask{position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+.term-confirm{border:1px solid #FFB000;background:#050805;padding:20px 24px;box-shadow:0 0 20px rgba(255,176,0,.25);min-width:280px;text-align:center}
+.tc-msg{font-size:13px;color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.5);letter-spacing:.08em;margin-bottom:16px}
+.tc-actions{display:flex;gap:14px;justify-content:center}
+.pin-tag{color:#FFB000}
+.admin-entry-btn{margin-right:10px;border-color:#FFB000;color:#FFB000}
+.admin-entry-btn:hover{background:#FFB000;color:#000}
+/* 管理员后台（admin.html，里页面终端风） */
+.admin-main{max-width:980px;margin:0 auto;padding:30px clamp(14px,3vw,40px) 40px;position:relative;z-index:2}
+.admin-title{font-size:clamp(18px,2.6vw,24px);font-weight:700;letter-spacing:.14em;border-left:4px solid #FFB000;padding-left:14px;margin-bottom:6px}
+.admin-sub{font-size:11px;color:#0FA962;letter-spacing:.18em;margin-bottom:24px}
+.admin-table{border:1px solid rgba(0,244,142,.35);margin-bottom:30px}
+.admin-row{display:grid;grid-template-columns:1.1fr 1fr 1.6fr .7fr 1fr auto;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px dashed rgba(0,244,142,.22);font-size:12.5px}
+.admin-row:last-child{border-bottom:none}
+.admin-row.head{background:rgba(0,244,142,.09);font-weight:700;letter-spacing:.08em;color:#00F48E}
+.admin-row .lv-cell{color:#FFB000}
+.admin-row .src-builtin{color:#0FA962}
+.admin-row .src-added{color:#FFB000}
+.admin-form{border:1px solid rgba(0,244,142,.35);padding:18px 20px}
+.admin-form .af-title{color:#FFB000;font-size:13px;letter-spacing:.14em;margin-bottom:14px}
+.admin-form input,.admin-form select{width:100%;box-sizing:border-box;background:rgba(0,244,142,.04);border:1px solid rgba(0,244,142,.4);color:#00F48E;font:inherit;font-size:13px;padding:8px 12px;outline:none;margin-bottom:12px;text-shadow:0 0 4px rgba(0,244,142,.3)}
+.admin-form input:focus,.admin-form select:focus{border-color:#00F48E}
+.admin-msg{font-size:12px;color:#FFB000;min-height:20px;margin-bottom:10px;letter-spacing:.05em}
+@media(max-width:760px){.admin-row{grid-template-columns:1fr 1fr;gap:4px 10px}}
+
+/* ============================================================
+ * OC 免责声明：本文件为原创角色（OC）创作项目的虚构网站组成部分。
+ * 恒序基金会、万界稳定局及站内所有数据、人物、组织、事件均为虚构，
+ * 不代表任何真实机构，亦不接受任何实际捐赠。仅供创作交流与非商业演示。
+ * ============================================================ */
+
+/* OC 免责声明（里页面底部可见条） */
+.oc-disclaimer-bbs{margin-top:18px;padding:6px 12px;text-align:center;font-size:9.5px;letter-spacing:.05em;color:#33403a;opacity:.8}
+
+/* ===== 移动端适配（Wave 3.1） ===== */
+@media(max-width:860px){
+  #bbs{font-size:13px}
+  .boot{padding:6vh 5vw;font-size:12.5px;min-height:52vh}
+  .bbs-head{flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:10px}
+  .bbs-status{text-align:left;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+  .bbs-sub{letter-spacing:.14em}
+  .bbs-rule{font-size:10.5px;padding:8px 0;margin-bottom:0}
+
+  /* —— 版块菜单栏（tab 吸顶） —— */
+  .bbs-body{display:block}
+  .boards{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+    position:sticky;top:0;z-index:30;background:#050805;
+    margin:0 calc(-1 * clamp(14px,3vw,40px));padding:0 clamp(14px,3vw,40px);
+    border-bottom:1px solid rgba(0,244,142,.35)}
+  .boards::-webkit-scrollbar{display:none}
+  .board{flex:none;border:none;border-bottom:2px solid transparent;margin:0;padding:11px 13px 9px;white-space:nowrap}
+  .board:hover{background:none}
+  .board.active{background:none;border-bottom-color:#00F48E}
+  .board.active .board-head{text-shadow:0 0 8px rgba(0,244,142,.8)}
+  .board-head{padding:0;font-size:12.5px}
+  .board-head .cnt{float:none;margin-left:7px;font-size:10px}
+  .board-desc{display:none}
+  .bbs-content{margin-top:12px}
+
+  /* 帖子流：更大点击热区 */
+  .thread-row{display:block;padding:13px 4px;min-height:44px}
+  .thread-title{display:block;margin-bottom:3px}
+  .thread-count{display:inline;margin-right:12px}
+  .thread-meta{display:inline;grid-column:auto}
+  .post-body{padding:12px 10px;font-size:12.5px;overflow-wrap:anywhere;word-break:break-word}
+  .post-head{flex-wrap:wrap;gap:4px 12px}
+
+  /* 发帖按钮 → 右下悬浮（无权限时 JS 控制 display:none 依然生效） */
+  #newThreadBtn{position:fixed;right:16px;bottom:22px;z-index:40;padding:10px 16px;
+    background:#050805;border:1px solid #00F48E;box-shadow:0 0 14px rgba(0,244,142,.35)}
+  #newThreadBtn[style*="none"]{display:none !important}
+  .composer{padding:12px}
+  .composer input,.composer textarea{font-size:13px}
+  .mini-btn{padding:2px 8px;font-size:11px}
+  #pager{flex-wrap:wrap;gap:8px;padding-bottom:64px}
+  .admin-table{font-size:11.5px}
+  .oc-disclaimer-bbs{position:static}
+}
