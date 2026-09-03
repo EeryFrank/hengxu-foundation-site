@@ -105,3 +105,4 @@ Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
 - 会话 token 32 字节随机 hex，7 天过期，存 sessionStorage `msb_auth`（`{id, ts, token}`）
 - 连续登录失败 5 次全局锁定 5 分钟（服务端判定，423 响应带回剩余秒数）
 - 所有 SQL 绑定参数；管理接口二次校验 token 对应账号 `source='admin'`
+
