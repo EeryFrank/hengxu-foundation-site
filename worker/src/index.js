@@ -7,6 +7,8 @@
    - 公开 API 一律带 CORS 头并处理 OPTIONS 预检
    ============================================================ */
 
+import { AI_PERSONAS } from './personas.js';
+
 /* ---------------- 常量 ---------------- */
 var PBKDF2_ITER = 100000; /* Workers WebCrypto 上限 100,000 次，勿调高 */
 var SALT = 'msb-bbs-auth-salt:v1';
@@ -18,6 +20,37 @@ var REG_WINDOW_MS = 60 * 60 * 1000;
 
 var LEVELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
 function lvRank(l) { return LEVELS.indexOf(l); }
+
+/* ---------------- AI 人格回复（站方默认 AI · DeepSeek） ---------------- */
+var AI_DAILY_LIMIT = 20;                 // 站方 AI 每用户每天额度（超限返回 quota-exceeded，前端回退模板引擎）
+var DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
+var DEEPSEEK_MODEL = 'deepseek-v4-flash';
+var AI_TIMEOUT_MS = 30000;              /* 推理模型经边缘节点回源国内服务，15s 偏紧 */
+
+/* UTC+8 当日日期串（与 nowStr 口径一致），ai_quota 的 day 键 */
+function todayStr() { return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); }
+
+/* DeepSeek chat（OpenAI 兼容）。任何失败/超时/空结果 → null（调用方回退） */
+async function deepseekChat(env, messages, maxTokens, temperature) {
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, AI_TIMEOUT_MS);
+  try {
+    var res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + env.DEEPSEEK_API_KEY },
+      body: JSON.stringify({
+        model: env.DEEPSEEK_MODEL || DEEPSEEK_MODEL,
+        messages: messages, max_tokens: maxTokens, temperature: temperature,
+        thinking: { type: 'disabled' }   /* 人格选人与短回复不需要推理；reasoning 会吃光 max_tokens 导致 content 为空 */
+      }),
+      signal: ctrl.signal
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    var txt = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    return (typeof txt === 'string' && txt.trim()) ? txt.trim() : null;
+  } catch (e) { return null; } finally { clearTimeout(timer); }
+}
 
 /* 版块定义（与 assets/bbs-data.js 的 BOARDS 一致；ro=只读仅管理员可发，lock=所需最低等级） */
 var BOARDS = {
@@ -374,6 +407,116 @@ async function handleDeleteReply(env, request, key) {
   return json({ ok: true });
 }
 
+/* ---------------- 路由：AI 人格回复（站方默认 AI） ---------------- */
+/* GET /api/personas —— 公开返回 20 人格池（含 sys，前端 BYOK 路径需要它拼 prompt） */
+function handleGetPersonas() {
+  return json({ personas: AI_PERSONAS });
+}
+
+/* POST /api/threads/:id/ai-reply —— 需登录。服务端选人 + 生成，回复直接入 replies 表。
+   永不抛给前端错误态的约定：notice/vault 版、选人 0 人、生成失败 → {replies:[]}（前端回退本地模板引擎）；
+   未配置 Key → {replies:[], reason:'no-key'}；当日额度用尽 → {replies:[], reason:'quota-exceeded'} */
+async function handleAiReply(env, request, postId) {
+  var s = await requireUser(env, request);
+  if (s.error) return s.error;
+  var u = s.account;
+
+  /* 帖子存在且未删除（用户帖查 threads；种子/生成帖由 id 规则推版块）；mods.deleted 按不存在处理 */
+  var boardId = await boardOfPost(env, postId);
+  var b = boardId && BOARDS[boardId];
+  if (!b) return errResp(404, 'unknown-post');
+  var del = await env.DB.prepare('SELECT deleted FROM mods WHERE post_id = ?').bind(postId).first();
+  if (del && del.deleted === 1) return errResp(404, 'unknown-post');
+  /* 公告版 / 封存区不触发人格回复 */
+  if (boardId === 'notice' || boardId === 'vault') return json({ replies: [] });
+
+  if (!env.DEEPSEEK_API_KEY) return json({ replies: [], reason: 'no-key' });
+
+  /* 配额：每用户每天 20 次（计数在决定真调模型时消耗一次，即便最终选人 0 人） */
+  var day = todayStr();
+  var q = await env.DB.prepare('SELECT count FROM ai_quota WHERE user_id = ? AND day = ?').bind(u.id, day).first();
+  if (q && q.count >= AI_DAILY_LIMIT) return json({ replies: [], reason: 'quota-exceeded' });
+
+  var body = await readBody(request);
+  if (!body) return errResp(400, 'bad-request');
+  var title = String(body.title || '').slice(0, 200);
+  var text = String(body.body || '').slice(0, 2000);
+  if (!title && !text) {
+    /* 客户端未带正文时，用户帖可从 threads 表取标题正文兜底 */
+    var t = await env.DB.prepare('SELECT title, body FROM threads WHERE id = ?').bind(postId).first();
+    if (t) { title = t.title; text = t.body; }
+  }
+
+  /* 同帖同一人格只回一次：查该帖已有 AI 回复的作者串，从候选池剔除 */
+  var existRs = await env.DB.prepare('SELECT author FROM replies WHERE post_id = ? AND ai = 1').bind(postId).all();
+  var replied = {};
+  (existRs.results || []).forEach(function (r) { replied[r.author] = true; });
+  var candidates = AI_PERSONAS.filter(function (p) { return !replied[p.name + ' · ' + p.role]; });
+  /* 人格账号本人发的帖，其对应人格不出场 */
+  candidates = candidates.filter(function (p) { return p.name !== u.name; });
+  if (!candidates.length) return json({ replies: [] });
+
+  /* 消耗一次当日配额 */
+  await env.DB.prepare('INSERT INTO ai_quota (user_id, day, count) VALUES (?, ?, 1) ' +
+    'ON CONFLICT(user_id, day) DO UPDATE SET count = count + 1').bind(u.id, day).run();
+
+  /* ---- 选人：把标题正文 + 候选人格一句话简介发给 DeepSeek，只收 JSON {"pick":[id...]} ---- */
+  var roster = candidates.map(function (p) {
+    return '- ' + p.id + '｜' + p.name + '｜' + p.role + '｜' + p.lv + '｜' + p.tagline +
+      (p.triggers && p.triggers.length ? '｜常接话题:' + p.triggers.join('/') : '');
+  }).join('\n');
+  var pickText = await deepseekChat(env, [
+    { role: 'system', content: '你是万界稳定局内网论坛的「人格调度员」。下面是一份论坛帖子和一份人格候选名单。' +
+      '这个论坛是内部闲聊与工作氛围，人格们都很乐于接话。请选出 1 到 2 个最适合回复此帖的人格：优先挑话题契合的（如设备故障找维保、食堂茶水间找话痨、情绪低落找医师）；' +
+      '话题模糊时挑喜欢闲聊的人格。只有公告、纯系统内容或完全无人能接的帖子才选 0 人。' +
+      '只输出 JSON，格式 {"pick":["id1","id2"]}，不要输出任何其他内容。id 必须来自名单。\n\n候选名单：\n' + roster },
+    { role: 'user', content: '帖子标题：' + title + '\n帖子内容：' + text.slice(0, 600) }
+  ], 800, 0.2);   /* deepseek-v4-flash 带 reasoning：max_tokens 需覆盖思考 token，否则 content 可能为空 */
+  var picks = [];
+  if (pickText) {
+    try {
+      var mj = /\{[\s\S]*\}/.exec(pickText);
+      var parsed = mj && JSON.parse(mj[0]);
+      var validIds = {};
+      candidates.forEach(function (p) { validIds[p.id] = true; });
+      if (parsed && Array.isArray(parsed.pick)) {
+        parsed.pick.forEach(function (id) {
+          if (validIds[id] && picks.indexOf(id) < 0 && picks.length < 2) picks.push(id);
+        });
+      } else if (typeof pickText === 'string') {
+        /* 模型没按格式输出时不猜，按 0 人处理 */
+      }
+    } catch (e) { picks = []; }
+  } else {
+    /* 选人调用失败/超时：返回空并标记原因，前端回退本地模板引擎 */
+    return json({ replies: [], reason: 'pick-failed' });
+  }
+  if (!picks.length) return json({ replies: [], reason: 'none-picked' });
+
+  /* ---- 生成：每个被选中人格一次调用（system=人格 sys，user=标题+正文） ---- */
+  var out = [];
+  for (var i = 0; i < picks.length; i++) {
+    var p = null;
+    for (var j = 0; j < AI_PERSONAS.length; j++) if (AI_PERSONAS[j].id === picks[i]) { p = AI_PERSONAS[j]; break; }
+    if (!p) continue;
+    var replyText = await deepseekChat(env, [
+      { role: 'system', content: p.sys },
+      { role: 'user', content: '帖子标题：' + title + '\n帖子内容：' + text.slice(0, 600) + '\n请以人设写一条回复，不超过150字。' }
+    ], 220, 0.8);
+    if (!replyText) continue;   /* 单人失败不影响其他人 */
+    var author = p.name + ' · ' + p.role;
+    var time = nowStr();
+    /* 落库前再查一次，防并发重复（同帖同人格只回一次） */
+    var dup = await env.DB.prepare('SELECT 1 AS x FROM replies WHERE post_id = ? AND ai = 1 AND author = ?').bind(postId, author).first();
+    if (dup) continue;
+    var rs = await env.DB.prepare(
+      'INSERT INTO replies (post_id, author, lv, time, body, ai, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)'
+    ).bind(postId, author, p.lv, time, replyText, nowIso()).run();
+    out.push({ id: rs.meta.last_row_id, author: author, lv: p.lv, time: time, body: replyText, ai: true });
+  }
+  return json({ replies: out });
+}
+
 /* ---------------- 路由：管理 ---------------- */
 async function handleAdminPin(env, request) {
   var s = await requireAdmin(env, request);
@@ -459,6 +602,7 @@ export default {
       if (path === '/api/me' && method === 'GET') return await handleMe(env, request);
       if (path === '/api/register' && method === 'POST') return await handleRegister(env, request);
       if (path === '/api/forum' && method === 'GET') return await handleGetForum(env);
+      if (path === '/api/personas' && method === 'GET') return handleGetPersonas();
       if (path === '/api/threads' && method === 'POST') return await handleCreateThread(env, request);
       if (path === '/api/admin/pin' && method === 'POST') return await handleAdminPin(env, request);
       if (path === '/api/admin/accounts' && method === 'GET') return await handleAdminListAccounts(env, request);
@@ -471,6 +615,9 @@ export default {
       }
       if ((m = /^\/api\/threads\/([^/]+)\/replies$/.exec(path))) {
         if (method === 'POST') return await handleCreateReply(env, request, decodeURIComponent(m[1]));
+      }
+      if ((m = /^\/api\/threads\/([^/]+)\/ai-reply$/.exec(path))) {
+        if (method === 'POST') return await handleAiReply(env, request, decodeURIComponent(m[1]));
       }
       if ((m = /^\/api\/replies\/(.+)$/.exec(path))) {
         if (method === 'DELETE') return await handleDeleteReply(env, request, decodeURIComponent(m[1]));
