@@ -1,6 +1,8 @@
 node_modules/
 .wrangler/
 .env
+.dev.vars
+**/.dev.vars
 *.db
 hengxu-foundation-static.zip
 .dev-state/

@@ -81,6 +81,9 @@
 .ai-modal input{width:100%;box-sizing:border-box;background:rgba(0,244,142,.04);border:1px solid rgba(0,244,142,.4);color:#00F48E;font:inherit;font-size:13px;padding:9px 12px;outline:none;margin-bottom:12px;text-shadow:0 0 4px rgba(0,244,142,.3)}
 .ai-modal input:focus{border-color:#00F48E}
 .ai-status{font-size:11.5px;color:#0FA962;margin-bottom:12px;letter-spacing:.08em}
+.ai-mode{display:block;cursor:pointer;margin-top:6px;font-size:12.5px;color:#00F48E}
+.ai-mode input{width:auto !important;margin:0 6px 0 0;accent-color:#00F48E}
+.ai-mode-desc{font-size:11.5px;line-height:1.7;color:#0FA962;margin:2px 0 8px 22px}
 @keyframes aiReplyIn{0%{background:rgba(0,244,142,.28);box-shadow:0 0 18px rgba(0,244,142,.5)}100%{background:transparent;box-shadow:none}}
 .post.ai-new{animation:aiReplyIn 2.4s ease-out 1}
 

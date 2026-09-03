@@ -68,3 +68,11 @@ CREATE TABLE IF NOT EXISTS register_guard (
   created_at INTEGER NOT NULL     -- epoch ms
 );
 CREATE INDEX IF NOT EXISTS idx_register_guard_ip ON register_guard(ip, created_at);
+
+-- 站方 AI 配额：每用户每天 20 次（day 为 UTC+8 日期串）
+CREATE TABLE IF NOT EXISTS ai_quota (
+  user_id TEXT NOT NULL,
+  day TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
