@@ -1,0 +1,15 @@
+node_modules/
+.wrangler/
+.env
+*.db
+hengxu-foundation-static.zip
+.dev-state/
+worker/...dev-state/
+
+# —— 敏感文件：含账号密码或哈希，永不提交/发布 ——
+worker/seed.sql
+worker/scripts/hash.js
+worker/scripts/verify-api.sh
+backend-design.md
+backend-migration-analysis.md
+恒序基金会-功能需求文档.md

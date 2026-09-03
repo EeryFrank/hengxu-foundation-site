@@ -1,0 +1,7 @@
+# wrangler [assets] 静态托管时排除的目录/文件（语法同 .gitignore）
+worker/
+.git*
+.wrangler/
+node_modules/
+*.md
+*.zip

@@ -1,0 +1,15 @@
+{
+  "name": "msb-bbs-worker",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev --persist-to \"%TEMP%\\msb-bbs-devstate\"",
+    "deploy": "wrangler deploy",
+    "db:init:local": "wrangler d1 execute msb-bbs-db --local --persist-to \"%TEMP%\\msb-bbs-devstate\" --file=schema.sql && wrangler d1 execute msb-bbs-db --local --persist-to \"%TEMP%\\msb-bbs-devstate\" --file=seed.sql",
+    "db:init:remote": "wrangler d1 execute msb-bbs-db --remote --file=schema.sql && wrangler d1 execute msb-bbs-db --remote --file=seed.sql",
+    "hash": "node scripts/hash.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

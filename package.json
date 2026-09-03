@@ -1,0 +1,8 @@
+{
+  "name": "hengxu-foundation-site",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix worker run dev"
+  }
+}

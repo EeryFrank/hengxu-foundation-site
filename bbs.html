@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 部署上线时：若 Pages 与 Worker 不同域，把 content 填成 Worker 地址（如 https://msb-bbs.<sub>.workers.dev）；本地开发留空 -->
+<meta name="api-base" content="">
+<title>404 · 恒序基金会</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/bbs.css">
+</head>
+<body>
+
+<!-- 未登录伪装 404（沿用旧 433–440 行 markup） -->
+<div class="page-404" id="page404">
+  <div>
+    <div class="code">404</div>
+    <h2>您访问的页面不存在</h2>
+    <p>该页面可能已被移动、删除，或从未存在过。</p>
+    <a class="home-link" href="index.html">返回首页</a>
+  </div>
+</div>
+
+<!-- ================= 里页面：万界稳定局内网 BBS ================= -->
+<div id="bbs">
+  <div class="crt-overlay"></div>
+  <div class="crt-vignette"></div>
+
+  <!-- 启动序列 -->
+  <div class="boot" id="boot" style="display:none"><pre id="bootText"></pre><span class="cursor" id="bootCursor">█</span></div>
+
+  <!-- 论坛主体 -->
+  <div class="bbs-main" id="bbsMain" style="display:none">
+    <header class="bbs-head">
+      <div class="bbs-title">
+        <div class="bbs-logo">万界稳定局 · 内部通讯网络</div>
+        <div class="bbs-sub">MULTIVERSE STABILITY BUREAU — INTRANET BULLETIN SYSTEM v3.7.1</div>
+      </div>
+      <div class="bbs-status">
+        <div id="whoLine">—</div>
+        <div class="dR-ticker" id="dRTicker">全域 ΔR 均值 0.31 ▲ 缓升中</div>
+        <button class="logout-btn" id="logoutBtn">[ 断开连接 ]</button>
+      </div>
+    </header>
+    <div class="bbs-rule">※ 本网络全程处于认知防火墙监控之下。观测即污染，请按权限阅读。 ※</div>
+
+    <div class="bbs-body">
+      <!-- 版块列表 -->
+      <aside class="boards" id="boardList"></aside>
+
+      <!-- 内容区 -->
+      <section class="bbs-content">
+        <div class="content-bar">
+          <span id="crumb">载入中…</span>
+          <button class="t-btn" id="newThreadBtn" style="display:none">[ + 发布新帖 ]</button>
+        </div>
+        <div id="threadList"></div>
+        <div class="pager" id="pager"></div>
+        <div id="threadView" style="display:none"></div>
+
+        <!-- 发帖/回帖表单 -->
+        <div class="composer" id="composer" style="display:none">
+          <div class="composer-head" id="composerTitle">发布新帖</div>
+          <input type="text" id="postTitle" maxlength="60" placeholder="标题（必填）">
+          <textarea id="postBody" rows="6" placeholder="正文……请注意：本板禁止写入未分级的高危知识。"></textarea>
+          <div class="composer-actions">
+            <button class="t-btn primary" id="postSubmit">[ 提交 ]</button>
+            <button class="t-btn" id="postCancel">[ 取消 ]</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="bbs-foot">
+      <span>万界稳定局 中央总署 · 档案与认知安全总署 联合维护</span>
+      <span>连接节点：第七观测站 中继 03 · 延迟 0.00ms（本地）</span>
+    </footer>
+    <div class="oc-disclaimer-bbs">OC 创作虚构内容 · 本站所有组织、人物、数据均为虚构，不代表任何真实机构，不接受任何实际捐赠</div>
+  </div>
+</div>
+
+<script src="assets/bbs-data.js"></script>
+<script src="assets/bbs.js"></script>
+</body>
+</html>
+
+<!-- ============================================================
+  OC 免责声明：本页面为原创角色（OC）创作项目的虚构网站组成部分。
+  恒序基金会、万界稳定局及站内所有数据、人物、组织、事件均为虚构，
+  不代表任何真实机构，亦不接受任何实际捐赠。仅供创作交流与非商业演示。
+============================================================ -->

@@ -1,0 +1,13 @@
+name = "msb-bbs"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# D1 绑定（线上库已于 2026-09-03 创建，APAC 区域）
+[[d1_databases]]
+binding = "DB"
+database_name = "msb-bbs-db"
+database_id = "d244d114-ea09-4c62-a757-91c6551c8bf6"
+
+# 静态托管：指向上级站点目录（HTML/CSS/JS 静态站与 API 同端口、同域）
+[assets]
+directory = "../"
